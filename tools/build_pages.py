@@ -5,7 +5,7 @@
 import io, json, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from site_config import V, BRAND, SEAL, FOOTER, SITE_JS, H1, LEAD, LEVEL_LEAD, LEVELS  # noqa: E402
+from site_config import V, BRAND, SEAL, FOOTER, SITE_JS, SITE_HEAD, H1, LEAD, LEVEL_LEAD, LEVELS  # noqa: E402
 
 
 def read(path):
@@ -51,45 +51,29 @@ def page(prefix, title, body, scripts=True, levels=None):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
 <link rel="stylesheet" href="{p}assets/style.css?v={v}">
+{head}
 </head>
-<body>
+<body data-root="{p}">
 <header class="site"><div class="wrap">
-  <a class="brand" href="{p}index.html"><span class="seal">{seal}</span> {brand}</a>
-  <nav><a href="{p}index.html#niveaus">Niveaus</a><a href="{p}herhaling.html">Herhalen</a><a href="{p}documentatie.html">Documentatie</a></nav>
+  <a class="brand" href="{p}index.html"><span class="seal">{seal}</span><span class="name">{brand}</span></a>
+  <nav><a href="{p}index.html#niveaus" data-nav="leren">Leren</a><a href="{p}herhaling.html" data-nav="herhalen">Herhalen <span class="count" data-due></span></a><a href="{p}documentatie.html" data-nav="grammatica">Grammatica</a><a href="{p}documentatie.html#woorden" data-nav="woorden">Woorden</a></nav>
+  <a class="btn cta" href="{p}index.html#niveaus" data-continue>Ga verder</a>
 </div></header>
 <main class="wrap">
 {body}
 <footer>{footer}</footer>
 </main>
 {tags}</body></html>
-""".format(footer=FOOTER, seal=SEAL, brand=BRAND, title=title, p=prefix, v=V, body=body.strip(), tags=tags)
+""".format(head=SITE_HEAD, footer=FOOTER, seal=SEAL, brand=BRAND, title=title, p=prefix, v=V, body=body.strip(), tags=tags)
 
 
-cards = "\n".join(
-    '  <a class="card" href="%s/"><div class="big">%s</div><p class="muted small zh">%s</p><span class="tag ok">%d lessen</span></a>'
-    % (d, label, topics, counts[key]) for key, label, d, topics in LEVELS)
+home_data = "<script>window.HOME = %s;</script>" % json.dumps(
+    {"h1": H1, "lead": LEAD, "topics": {k: t for k, _, _, t in LEVELS}}, ensure_ascii=False)
+fallback = "".join('<li><a href="%s/">%s</a></li>' % (d, label) for _, label, d, _ in LEVELS)
 write("index.html", page("", BRAND, """
-<h1>%s</h1>
-<p class="lead">%s</p>
-
-<h2 id="niveaus">Kies je niveau</h2>
-<div class="grid">
+<div id="app" data-page="home"><h1>%s</h1><p class="lead">%s</p><ul>%s</ul></div>
 %s
-</div>
-
-<h2>Zo werkt een les</h2>
-<div class="card">
-<ol>
-  <li><b>Gok eerst.</b> Eén vraag over het nieuwe patroon, vóór de uitleg. Telt niet mee.</li>
-  <li><b>Het idee.</b> Welk probleem lost het patroon op, een plaatje van de zinsbouw, en de valkuil.</li>
-  <li><b>Dieper.</b> Wanneer wel en niet, het verschil met patronen die erop lijken, en veelgemaakte fouten.</li>
-  <li><b>Voorbeelden, woorden, dialoog en leestekst.</b> Met uitspraakhulp (uit te zetten) en uitspraak via je browser.</li>
-  <li><b>Oefenen.</b> Meerkeuze, invullen, zinnen bouwen en vertalen. Fout? Je krijgt uitleg en probeert opnieuw.</li>
-  <li><b>Herhalen.</b> Na 2 dagen komen nieuwe vragen terug. Goed: de pauze verdubbelt. Fout: morgen opnieuw.</li>
-</ol>
-</div>
-<p>Alle grammatica en woorden op één plek: <a href="documentatie.html">Documentatie</a>. Per niveau is er ook een woordenlijst met flashcards.</p>
-""" % (H1, LEAD, cards), scripts=False))
+""" % (H1, LEAD, fallback, home_data)))
 
 write("herhaling.html", page("", "Herhalen · " + BRAND, '<div id="app" data-page="review"><p>Laden...</p></div>'))
 write("documentatie.html", page("", "Documentatie · " + BRAND, '<div id="app" data-page="docs"><p>Laden...</p></div>'))

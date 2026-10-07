@@ -4,7 +4,7 @@
   // ---------- site settings (window.SITE overrides these; defaults are the Chinese site) ----------
   var CFG = Object.assign({
     key: "hsk-learning-v1", lang: "zh-CN", voice: /^zh/i, rom: "pinyin", language: "Chinees", unit: "karakter", sep: "",
-    listNote: "Dit is geen officiële HSK 3.0-woordenlijst.", first: "hsk3/les.html?id=01", firstLabel: "HSK 3 · les 1"
+    listNote: "Dit is geen officiële HSK 3.0-woordenlijst.", passSeal: "过", first: "hsk3/les.html?id=01", firstLabel: "HSK 3 · les 1"
   }, window.SITE || {});
 
   // ---------- storage (progress lives only in this browser) ----------
@@ -63,10 +63,13 @@
   // ---------- pinyin toggle ----------
   function applyPinyin() { document.body.classList.toggle("no-py", state.prefs.pinyin === false); }
   function pinyinToggle() {
-    return '<label><input type="checkbox" id="pytoggle"' + (state.prefs.pinyin === false ? "" : " checked") + "> " + CFG.rom + " tonen</label>";
+    return '<label><input type="checkbox" class="pytoggle"' + (state.prefs.pinyin === false ? "" : " checked") + "> " + CFG.rom.charAt(0).toUpperCase() + CFG.rom.slice(1) + " tonen</label>";
   }
   document.addEventListener("change", function (e) {
-    if (e.target.id === "pytoggle") { state.prefs.pinyin = e.target.checked; save(state); applyPinyin(); }
+    if (e.target.classList && e.target.classList.contains("pytoggle")) {
+      state.prefs.pinyin = e.target.checked; save(state); applyPinyin();
+      document.querySelectorAll(".pytoggle").forEach(function (x) { x.checked = e.target.checked; });
+    }
   });
   applyPinyin();
 
@@ -193,6 +196,79 @@
     }).join("") + "</table></div>";
   }
 
+  // ---------- navigation helpers ----------
+  var HAN1 = /[㐀-鿿가-힣]/;
+  function keyGlyph(L) {
+    var k = (L.pattern || []).filter(function (b) { return b.key; })[0] || (L.pattern || [])[0] || { v: "" };
+    var m = String(k.v).match(HAN1) || String(L.title).match(HAN1);
+    return m ? m[0] : "";
+  }
+  function levelKeys() { return Object.keys(window.HSK); }
+  function passedIn(lk) { return window.HSK[lk].lessons.filter(function (L) { return state.lessons[lk + "-" + L.id]; }).length; }
+  // Where "Ga verder" goes: the last opened lesson if not passed, else the next open lesson after it.
+  function nextTarget() {
+    var keys = levelKeys(), last = state.last;
+    function firstOpen(lk, from) {
+      var ls = window.HSK[lk].lessons;
+      for (var i = from || 0; i < ls.length; i++) if (!state.lessons[lk + "-" + ls[i].id]) return { lk: lk, L: ls[i] };
+      return null;
+    }
+    if (last && window.HSK[last.lk]) {
+      var ls = window.HSK[last.lk].lessons, i = ls.findIndex(function (L) { return L.id === last.id; });
+      if (i >= 0 && !state.lessons[last.lk + "-" + last.id]) return { lk: last.lk, L: ls[i] };
+      var t = firstOpen(last.lk, i + 1) || firstOpen(last.lk, 0);
+      if (t) return t;
+    }
+    for (var k = 0; k < keys.length; k++) { var o = firstOpen(keys[k], 0); if (o) return o; }
+    return { lk: keys[0], L: window.HSK[keys[0]].lessons[0] };
+  }
+  function rootPath() { return document.body.getAttribute("data-root") || ""; }
+  function lessonHref(lk, id) { return rootPath() + (window.HSK[lk].dir || lk) + "/les.html?id=" + id; }
+  function squaresHtml(lk) {
+    return '<span class="squares" aria-hidden="true">' + window.HSK[lk].lessons.map(function (L) {
+      return "<i" + (state.lessons[lk + "-" + L.id] ? ' class="on"' : "") + "></i>";
+    }).join("") + "</span>";
+  }
+  function decorateHeader(page) {
+    var due = dueRules().length;
+    document.querySelectorAll("[data-due]").forEach(function (s) { s.textContent = due ? String(due) : ""; });
+    var t = nextTarget(), c = document.querySelector("[data-continue]");
+    if (c && t) { c.href = lessonHref(t.lk, t.L.id); c.title = window.HSK[t.lk].level + ", les " + Number(t.L.id) + ": " + t.L.title; }
+    var on = page === "review" ? "herhalen" : page === "docs" ? (location.hash.indexOf("#woorden") === 0 ? "woorden" : "grammatica") :
+      page === "words" ? "woorden" : "leren";
+    document.querySelectorAll("[data-nav]").forEach(function (a) { a.classList.toggle("on", a.getAttribute("data-nav") === on); });
+  }
+
+  // ---------- page: home ----------
+  function homePage(root) {
+    var H = window.HOME || {}, keys = levelKeys(), t = nextTarget(), due = dueRules().length;
+    var totalL = 0, passed = 0, words = 0;
+    keys.forEach(function (lk) { totalL += window.HSK[lk].lessons.length; passed += passedIn(lk); words += wordCount(window.HSK[lk]); });
+    var known = Object.keys(state.known || {}).length;
+    var started = Object.keys(state.lessons).length > 0 || !!state.last;
+    var lv = window.HSK[t.lk];
+    root.innerHTML =
+      '<section class="home-hero"><div class="grid-char"><span>' + esc(keyGlyph(t.L)) + "</span></div><div>" +
+      "<h1>" + esc(H.h1 || "") + '</h1><p class="lead">' + esc(H.lead || "") + "</p>" +
+      '<p class="next-label">' + (started ? "Ga verder met " : "Begin met ") + esc(lv.level) + ", les " + Number(t.L.id) + '</p><p><b>' + zh(t.L.title) + "</b>: " + zh(t.L.sub) + "</p>" +
+      '<div class="row"><a class="btn" href="' + lessonHref(t.lk, t.L.id) + '">' + (started ? "Ga verder" : "Begin de eerste les") + "</a>" +
+      (due ? '<a class="btn ghost" href="herhaling.html">Herhalen (' + due + ")</a>" : "") + "</div>" +
+      '<p class="facts"><span><b>' + passed + "</b> van " + totalL + " lessen gehaald</span><span><b>" + known + "</b> van " + words + " woorden gekend</span>" +
+      "<span><b>" + due + "</b> herhaling" + (due === 1 ? "" : "en") + " klaar</span></p></div></section>" +
+      '<h2 id="niveaus">Niveaus</h2><div class="levels">' + keys.map(function (lk) {
+        var L = window.HSK[lk], p = passedIn(lk), wc = wordCount(L);
+        return '<a class="level-row" href="' + (L.dir || lk) + '/"><span class="name">' + esc(L.level) + "</span>" + squaresHtml(lk) +
+          '<span class="topics zh">' + esc((H.topics || {})[lk] || "") + '</span><span class="meta">' + p + " van " + L.lessons.length + " lessen<br>" + wc + " woorden</span></a>";
+      }).join("") + "</div>" +
+      '<h2>Zo werkt een les</h2><ol class="how">' +
+      "<li><b>Gok eerst.</b> Eén vraag over het nieuwe patroon, vóór de uitleg. Telt niet mee.</li>" +
+      "<li><b>Het idee.</b> Welk probleem het patroon oplost, de zinsbouw als schema, en de valkuil.</li>" +
+      "<li><b>Dieper.</b> Wanneer wel en niet, het verschil met patronen die erop lijken, en veelgemaakte fouten.</li>" +
+      "<li><b>Woorden, dialoog en leestekst.</b> Met " + esc(CFG.rom) + " (uit te zetten) en uitspraak via je browser.</li>" +
+      "<li><b>Oefenen.</b> Meerkeuze, invullen, zinnen bouwen en vertalen. Fout? Je krijgt uitleg en probeert opnieuw.</li>" +
+      "<li><b>Herhalen.</b> Na 2 dagen komen nieuwe vragen terug. Goed: de pauze verdubbelt. Fout: morgen opnieuw.</li></ol>";
+  }
+
   // ---------- page: lesson ----------
   function lessonPage(root) {
     var params = new URLSearchParams(location.search);
@@ -200,55 +276,89 @@
     var idx = level.lessons.findIndex(function (l) { return l.id === params.get("id"); });
     if (idx < 0) idx = 0;
     var L = level.lessons[idx], lid = levelKey + "-" + L.id;
-    document.title = L.id + " " + L.title + " · " + level.level;
+    document.title = L.id + " " + L.title + " | " + level.level;
+    state.last = { lk: levelKey, id: L.id }; save(state);
 
-    var h = [], toc = [], sec = 0, due = dueRules().length;
-    function h2(t, id) { sec++; toc.push('<a href="#' + id + '">' + sec + ". " + t + "</a>"); return '<h2 id="' + id + '">' + sec + ". " + t + "</h2>"; }
-
-    h.push(h2("Gok eerst", "gok") + '<p class="muted small">Nog geen uitleg gehad? Juist. Gokken telt niet mee, maar je onthoudt de uitleg daarna beter.</p><div id="guess"></div>');
-    h.push(h2("Het idee", "idee") + "<p>" + zh(L.problem) + "</p>" + patternHtml(L) + '<p class="pattern-cap">' + zh(L.patternCap) + "</p>");
-    h.push("<ul>" + L.rules.map(function (r) { return "<li>" + zh(r) + "</li>"; }).join("") + "</ul>");
-    h.push('<p class="pitfall"><b>Let op:</b> ' + zh(L.pitfall) + "</p>");
-    h.push(h2("Voorbeelden", "voorbeelden") + '<div class="card">' + L.examples.map(exHtml).join("") + "</div>");
-    if (L.nuance && L.nuance.length) h.push(h2("Dieper: wanneer wel en niet", "dieper") + nuanceHtml(L));
-    if (L.mistakes && L.mistakes.length) h.push(h2("Veelgemaakte fouten", "fouten") + mistakesHtml(L));
-    if (L.vocab && L.vocab.length) h.push(h2("Tien woorden", "woorden") + '<p class="muted small">Oefenwoorden op ' + esc(level.level) + "-niveau. " + CFG.listNote +
-      (level.words ? ' Meer woorden: <a href="woorden.html">woordenlijst ' + esc(level.level) + "</a>." : "") + '</p><div class="card"><table class="vocab">' +
+    var secs = [];
+    function sec(id, title, html) { secs.push({ id: id, title: title, html: html }); }
+    sec("gok", "Gok eerst", '<p class="muted">Nog geen uitleg gehad? Juist. Gokken telt niet mee, maar je onthoudt de uitleg daarna beter.</p><div id="guess"></div>');
+    sec("idee", "Het idee", "<p>" + zh(L.problem) + "</p>" + patternHtml(L) + '<p class="pattern-cap">' + zh(L.patternCap) + "</p>" +
+      '<ul class="rules">' + L.rules.map(function (r) { return "<li>" + zh(r) + "</li>"; }).join("") + "</ul>" +
+      '<p class="pitfall"><b>Let op:</b> ' + zh(L.pitfall) + "</p>");
+    sec("voorbeelden", "Voorbeelden", '<div class="card">' + L.examples.map(exHtml).join("") + "</div>");
+    if (L.nuance && L.nuance.length) sec("dieper", "Wanneer wel en niet", nuanceHtml(L));
+    if (L.mistakes && L.mistakes.length) sec("fouten", "Veelgemaakte fouten", mistakesHtml(L));
+    if (L.vocab && L.vocab.length) sec("woorden", "Tien woorden", '<p class="muted small">Oefenwoorden op ' + esc(level.level) + "-niveau. " + CFG.listNote +
+      (level.words ? ' Meer woorden staan in de <a href="woorden.html">woordenlijst van ' + esc(level.level) + "</a>." : "") + '</p><div class="card"><table class="vocab">' +
       L.vocab.map(function (v) { return '<tr><td class="h">' + esc(v[0]) + " " + sayBtn(v[0]) + '</td><td class="p">' + esc(v[1]) + "</td><td>" + esc(v[2]) + "</td></tr>"; }).join("") + "</table></div>");
-    h.push(h2("Dialoog", "dialoog") + '<div class="card dlg">' + L.dialogue.map(function (d) {
-      return '<div class="ex"><div class="cn"><span class="who">' + d[0] + "</span>" + esc(d[1]) + " " + sayBtn(d[1]) + '</div><div class="py">' + esc(d[2]) + '</div><div class="nl">' + esc(d[3]) + "</div></div>";
+    sec("dialoog", "Dialoog", '<div class="card dlg">' + L.dialogue.map(function (d) {
+      return '<div class="ex"><span class="who">' + esc(d[0]) + '</span><div class="cn">' + esc(d[1]) + " " + sayBtn(d[1]) + '</div><div class="py">' + esc(d[2]) + '</div><div class="nl">' + esc(d[3]) + "</div></div>";
     }).join("") + "</div>");
-    if (L.reading) h.push(h2("Lezen", "lezen") + '<div class="card reading"><h3 class="zh">' + esc(L.reading.title) + " " +
+    if (L.reading) sec("lezen", "Lezen", '<div class="card reading"><h3>' + esc(L.reading.title) + " " +
       sayBtn(L.reading.lines.map(function (x) { return x.cn; }).join(CFG.sep || "")) + "</h3>" +
-      '<p class="muted small"><label><input type="checkbox" id="rtrans"> vertaling tonen</label></p>' +
+      '<p class="toolbar"><label><input type="checkbox" id="rtrans"> Vertaling tonen</label></p>' +
       L.reading.lines.map(function (x) { return '<p class="rl"><span class="cn">' + esc(x.cn) + '</span><span class="py">' + esc(x.py) + '</span><span class="nl">' + esc(x.nl) + "</span></p>"; }).join("") +
       '</div><div id="rq"></div>');
-    h.push(h2("Oefenen", "oefenen") + '<p class="muted small">Eén vraag tegelijk. Fout? Lees de uitleg en probeer opnieuw.</p><div id="qs"></div><div id="result"></div>');
+    sec("oefenen", "Oefenen", '<p class="muted">Eén vraag tegelijk. Fout? Lees de uitleg en probeer opnieuw.</p><div id="qs"></div><div id="result"></div>');
 
-    var nav = '<div class="pager">' + (idx > 0 ? '<a href="les.html?id=' + level.lessons[idx - 1].id + '">← ' + zh(level.lessons[idx - 1].title) + "</a>" : "<span></span>") +
-      (idx < level.lessons.length - 1 ? '<a href="les.html?id=' + level.lessons[idx + 1].id + '">' + zh(level.lessons[idx + 1].title) + " →</a>" : '<a href="./">Terug naar overzicht →</a>') + "</div>";
-    var head = '<p class="muted small"><a href="./">' + esc(level.level) + "</a> · les " + (idx + 1) + " van " + level.lessons.length + "</p>" +
-      "<h1>" + zh(L.id + " " + L.title) + '</h1><p class="lead">' + zh(L.sub) + "</p>" +
-      '<div class="toolbar">' + pinyinToggle() + "<span>· ongeveer 30 minuten · Leren → Lezen → Oefenen → Herhalen</span></div>" +
-      '<nav class="toc">' + toc.join("") + "</nav>" +
-      (due ? '<div class="card">Er staan <b>' + due + '</b> herhalingsvragen klaar. <a href="../herhaling.html">Eerst herhalen</a></div>' : "");
-    root.innerHTML = head + h.join("") + nav;
+    var next = level.lessons[idx + 1], prev = level.lessons[idx - 1];
+    var nextHtml = next
+      ? '<a class="card next-card" href="les.html?id=' + next.id + '"><span class="grid-char sm"><span>' + esc(keyGlyph(next)) + '</span></span><span class="t"><small>Volgende les</small><b>' + zh(next.title) + "</b></span></a>"
+      : '<a class="card next-card" href="./"><span class="t"><small>Laatste les van ' + esc(level.level) + "</small><b>Terug naar het overzicht</b></span></a>";
+    var pager = '<p class="pager">' + (prev ? '<a href="les.html?id=' + prev.id + '">Vorige les: ' + zh(prev.title) + "</a>" : "<span></span>") + '<a href="./">Alle lessen van ' + esc(level.level) + "</a></p>";
+    var due = dueRules().length;
+    var head = '<header class="lesson-head"><div><p class="where"><a href="./">' + esc(level.level) + "</a>, les " + (idx + 1) + " van " + level.lessons.length +
+      (state.lessons[lid] ? ' <span class="tag ok">gehaald</span>' : "") + "</p>" +
+      "<h1>" + zh(L.title) + '</h1><p class="lead">' + zh(L.sub) + "</p>" +
+      '<p class="goal"><b>Doel:</b> ' + zh(L.canDo.replace(/^Je kunt nu /, "je kunt straks ")) + "</p>" +
+      '<div class="toolbar mobile-toolbar">' + pinyinToggle() + "</div></div>" +
+      '<div class="grid-char"><span>' + esc(keyGlyph(L)) + "</span></div></header>";
+    var side = '<aside class="side"><nav class="toc" aria-label="Onderdelen van de les">' + secs.map(function (s, i) {
+      return '<a href="#' + s.id + '"><span class="n">' + (i + 1) + "</span>" + s.title + "</a>";
+    }).join("") + '</nav><div class="side-box"><span id="pcount"></span><div class="progress"><i id="pbar" style="width:0"></i></div>' +
+      (due ? '<a href="../herhaling.html">' + due + " herhaling" + (due === 1 ? "" : "en") + " klaar</a>" : "") + "</div>" +
+      '<div class="toolbar">' + pinyinToggle() + "</div></aside>";
+    root.innerHTML = head + '<div class="lesson-layout">' + side + '<div class="lesson-main">' + secs.map(function (s, i) {
+      return '<section id="' + s.id + '"><h2><span class="n">' + (i + 1) + "</span>" + s.title + "</h2>" + s.html + "</section>";
+    }).join("") + nextHtml + pager + "</div></div>";
 
     root.querySelector("#guess").appendChild(mcWidget(L.guess, lid + "-g", function () {}, { oneShot: true, label: "G" }));
     var rt = root.querySelector("#rtrans");
     if (rt) rt.addEventListener("change", function () { root.querySelector(".reading").classList.toggle("show-nl", rt.checked); });
 
+    // Scroll spy: highlight the section in view.
+    var links = root.querySelectorAll("nav.toc a");
+    if ("IntersectionObserver" in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          links.forEach(function (a) {
+            var on = a.getAttribute("href") === "#" + e.target.id;
+            a.classList.toggle("on", on);
+            if (on && a.scrollIntoView && window.innerWidth <= 980) a.parentNode.scrollLeft = a.offsetLeft - 20;
+          });
+        });
+      }, { rootMargin: "-30% 0px -60% 0px" });
+      root.querySelectorAll(".lesson-main > section").forEach(function (s) { io.observe(s); });
+    }
+
     // Reading questions (L1..) and exercises (Q1..) together decide the pass.
     var items = (L.reading ? L.reading.questions.map(function (q, i) { return { q: q, label: "L" + (i + 1), seed: lid + "-l" + i, box: "#rq" }; }) : [])
       .concat(L.questions.map(function (q, i) { return { q: q, label: "Q" + (i + 1), seed: lid + "-q" + i, box: "#qs" }; }));
     var total = items.length, solved = 0, firstTry = 0;
-    function done(ok) { solved++; if (ok) firstTry++; if (solved === total) finish(); }
+    function progress() {
+      root.querySelector("#pcount").textContent = solved + " van " + total + " vragen gedaan";
+      root.querySelector("#pbar").style.width = Math.round(100 * solved / total) + "%";
+    }
+    function done(ok) { solved++; if (ok) firstTry++; progress(); if (solved === total) finish(); }
     items.forEach(function (it) {
-      var q = it.q;
-      var w = q.type === "order" ? orderWidget(q, it.seed, done, it.label) : q.type === "open" ? openWidget(q, done, it.label) :
-        q.type === "fill" ? fillWidget(q, done, it.label) : mcWidget(q, it.seed, done, { label: it.label });
+      var q = it.q, w;
+      w = q.type === "order" ? orderWidget(q, it.seed, mark, it.label) : q.type === "open" ? openWidget(q, mark, it.label) :
+        q.type === "fill" ? fillWidget(q, mark, it.label) : mcWidget(q, it.seed, mark, { label: it.label });
+      function mark(ok) { w.classList.add("solved"); done(ok); }
       root.querySelector(it.box).appendChild(w);
     });
+    progress();
 
     function finish() {
       var first = !state.lessons[lid];
@@ -256,11 +366,11 @@
         state.lessons[lid] = { passed: today(), firstTry: firstTry === total };
         L.review.forEach(function (_, ri) { state.rules[lid + "-r" + ri] = { next: addDays(today(), 2), gap: 2 }; });
         save(state);
+        decorateHeader("lesson");
       }
-      root.querySelector("#result").innerHTML = '<p class="pass">' + zh(L.canDo) + '</p><p class="muted small">' +
-        (first ? "Over 2 dagen komen " + L.review.length + ' nieuwe vragen over deze les terug op de <a href="../herhaling.html">herhaalpagina</a>.' : "Je had deze les al eerder gehaald.") + "</p>";
+      root.querySelector("#result").innerHTML = '<div class="pass"><span class="stamp" aria-hidden="true">' + esc(CFG.passSeal) + "</span><div>" + zh(L.canDo) +
+        '<br><span class="muted small">' + (first ? "Over 2 dagen komen " + L.review.length + ' nieuwe vragen over deze les terug bij <a href="../herhaling.html">Herhalen</a>.' : "Je had deze les al eerder gehaald.") + "</span></div></div>";
     }
-    if (state.lessons[lid]) root.querySelector("#qs").insertAdjacentHTML("beforebegin", '<p class="tag ok">Al gehaald op ' + esc(state.lessons[lid].passed) + "</p>");
   }
 
   // ---------- review (spaced: 2 days, double when right, back to 1 when wrong, learned at 16+) ----------
@@ -311,17 +421,15 @@
   function wordCount(level) { return level.words ? level.words.themes.reduce(function (n, t) { return n + t.words.length; }, 0) : 0; }
   function levelPage(root) {
     var lk = root.dataset.level, level = window.HSK[lk];
-    var passed = level.lessons.filter(function (L) { return state.lessons[lk + "-" + L.id]; }).length;
-    var pct = Math.round(100 * passed / level.lessons.length);
-    var due = dueRules().length, wc = wordCount(level);
-    root.innerHTML = '<div class="card"><div class="row" style="justify-content:space-between;margin:0"><span><b>' + passed + "</b> van " + level.lessons.length + " lessen gehaald</span>" +
-      (due ? '<a href="../herhaling.html">' + due + " herhalingsvragen klaar</a>" : '<span class="muted">geen herhaling klaar</span>') +
-      '</div><div class="progress" style="margin-top:8px"><i style="width:' + pct + '%"></i></div>' +
-      (wc ? '<p class="small" style="margin:10px 0 0"><a href="woorden.html">Woordenlijst ' + esc(level.level) + ": " + wc + " woorden, met flashcards →</a></p>" : "") + "</div>" +
+    var passed = passedIn(lk), wc = wordCount(level), due = dueRules().length;
+    var nextId = (level.lessons.filter(function (L) { return !state.lessons[lk + "-" + L.id]; })[0] || {}).id;
+    root.innerHTML = '<div class="level-head">' + squaresHtml(lk) + '<p class="facts"><span><b>' + passed + "</b> van " + level.lessons.length + " lessen gehaald</span>" +
+      (wc ? '<span><a href="woorden.html">Woordenlijst met flashcards</a> (' + wc + " woorden)</span>" : "") +
+      (due ? '<span><a href="../herhaling.html">' + due + " herhaling" + (due === 1 ? "" : "en") + " klaar</a></span>" : "") + "</p></div>" +
       '<ol class="lessons">' + level.lessons.map(function (L) {
         var ok = state.lessons[lk + "-" + L.id];
-        return '<li class="card"><a href="les.html?id=' + L.id + '"><span class="num">' + L.id + '</span><span class="t">' + zh(L.title) + "<small>" + zh(L.sub) + "</small></span>" +
-          (ok ? '<span class="tag ok">gehaald</span>' : '<span class="tag dim">open</span>') + "</a></li>";
+        return '<li class="' + (ok ? "done" : L.id === nextId ? "next" : "") + '"><a href="les.html?id=' + L.id + '"><span class="num">' + Number(L.id) + '</span><span class="t">' + zh(L.title) + "<small>" + zh(L.sub) + "</small></span>" +
+          (ok ? '<span class="tag ok">gehaald</span>' : L.id === nextId ? '<span class="tag">volgende</span>' : "") + "</a></li>";
       }).join("") + "</ol>";
   }
 
@@ -338,7 +446,7 @@
 
     function header() {
       var k = all.filter(function (x) { return known(x.v); }).length;
-      return '<p class="muted small"><a href="./">' + esc(level.level) + "</a> · woordenlijst</p><h1>Woorden " + esc(level.level) + "</h1>" +
+      return '<p class="muted small"><a href="./">' + esc(level.level) + "</a>, woordenlijst</p><h1>Woorden " + esc(level.level) + "</h1>" +
         '<p class="lead">' + all.length + " woorden in " + themes.length + " thema's. Je kent er <b>" + k + "</b>. " + CFG.listNote + "</p>" +
         '<div class="toolbar">' + pinyinToggle() + "</div>" +
         '<nav class="tabs"><a href="#" data-mode="lijst"' + (mode === "lijst" ? ' class="on"' : "") + ">Lijst</a>" +
@@ -366,8 +474,9 @@
       if (!deck.length) return opts + '<div class="card">Geen kaarten in deze selectie. Zet "alleen woorden die ik nog niet ken" uit, of kies een ander thema.</div>';
       if (pos >= deck.length) return opts + '<div class="card"><p>Klaar: je hebt alle ' + deck.length + ' kaarten gezien.</p><button class="btn" type="button" data-a="again">Opnieuw schudden</button></div>';
       var v = deck[pos];
-      var front = reverse ? '<div class="fc-nl">' + esc(v[2]) + "</div>" : '<div class="fc-word zh">' + esc(v[0]) + "</div>";
-      var back = reverse ? '<div class="fc-word zh">' + esc(v[0]) + " " + sayBtn(v[0]) + '</div><div class="py">' + esc(v[1]) + "</div>"
+      var square = '<div class="grid-char' + (v[0].length > 2 ? " wide" : "") + '"><span>' + esc(v[0]) + "</span></div>";
+      var front = reverse ? '<div class="fc-nl">' + esc(v[2]) + "</div>" : square;
+      var back = reverse ? square + sayBtn(v[0]) + '<div class="py">' + esc(v[1]) + "</div>"
         : '<div class="py">' + esc(v[1]) + " " + sayBtn(v[0]) + '</div><div class="fc-nl">' + esc(v[2]) + "</div>";
       return opts + '<div class="card flashcard"><p class="muted small">Kaart ' + (pos + 1) + " van " + deck.length + "</p>" + front +
         (shown ? '<div class="fc-back">' + back + '</div><div class="row" style="justify-content:center"><button class="btn ghost" type="button" data-a="no">Nog niet</button><button class="btn" type="button" data-a="yes">Ken ik</button></div>'
@@ -405,7 +514,7 @@
     function grammar() {
       return levels.map(function (lk) {
         var level = window.HSK[lk];
-        return "<h2>" + esc(level.level) + '</h2><div class="toc">' + level.lessons.map(function (L) {
+        return "<h2>" + esc(level.level) + '</h2><div class="toc-chips">' + level.lessons.map(function (L) {
           return '<a href="#g-' + lk + "-" + L.id + '">' + zh(L.title) + "</a>";
         }).join("") + "</div>" + level.lessons.map(function (L) {
           return '<div class="card gram" id="g-' + lk + "-" + L.id + '"><h3>' + zh(L.title) + '</h3><p class="muted small">' + zh(L.sub) + "</p>" +
@@ -414,7 +523,7 @@
             '<p class="pitfall"><b>Let op:</b> ' + zh(L.pitfall) + "</p>" + L.examples.map(exHtml).join("") +
             (L.nuance && L.nuance.length ? "<details><summary>Dieper: wanneer wel en niet</summary>" + nuanceHtml(L) + "</details>" : "") +
             (L.mistakes && L.mistakes.length ? "<details><summary>Veelgemaakte fouten</summary>" + mistakesHtml(L) + "</details>" : "") +
-            '<p class="small"><a href="' + (level.dir || lk) + "/les.html?id=" + L.id + '">Naar de les →</a></p></div>';
+            '<p class="small"><a href="' + (level.dir || lk) + "/les.html?id=" + L.id + '">Naar de les</a></p></div>';
         }).join("");
       }).join("");
     }
@@ -432,7 +541,7 @@
           t.words.forEach(function (v) { if (!seen[v[0]]) { seen[v[0]] = 1; rows.push(row(v, lk, dir + "/woorden.html", t.name)); } });
         });
         if (!rows.length) return "";
-        return "<h2>" + esc(level.level) + ' <a class="small" href="' + dir + '/woorden.html">flashcards →</a></h2><div class="card"><table class="vocab">' + rows.join("") + "</table></div>";
+        return "<h2>" + esc(level.level) + '</h2><p class="small"><a href="' + dir + '/woorden.html">Flashcards voor ' + esc(level.level) + '</a></p><div class="card"><table class="vocab">' + rows.join("") + "</table></div>";
       }).join("") + '<p class="muted small" id="wnone" hidden>Geen woorden gevonden.</p><p class="muted small">Oefenwoorden op niveau. ' + CFG.listNote + "</p>";
     }
     function render() {
@@ -459,9 +568,12 @@
   var root = document.getElementById("app");
   if (!root) return;
   var page = root.dataset.page;
-  if (page === "lesson") lessonPage(root);
+  if (page === "home") homePage(root);
+  else if (page === "lesson") lessonPage(root);
   else if (page === "review") reviewPage(root);
   else if (page === "level") levelPage(root);
   else if (page === "docs") docsPage(root);
   else if (page === "words") wordsPage(root);
+  decorateHeader(page);
+  window.addEventListener("hashchange", function () { decorateHeader(page); });
 })();

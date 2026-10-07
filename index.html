@@ -4,39 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Korean Learning</title>
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Serif+KR:wght@400;600&display=swap"><style>:root{--zh:"Noto Serif KR","AppleMyungjo","Batang",serif;--green:#2b5a8a;--green-soft:#e6eef7;--grid:#cddbeb;--ok:#2b5a8a;--ok-soft:#e6eef7}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--green:#8fb5e3;--green-soft:#17263a;--grid:#2a3e57;--ok:#8fb5e3;--ok-soft:#17263a}}</style>
 </head>
-<body>
+<body data-root="">
 <header class="site"><div class="wrap">
-  <a class="brand" href="index.html"><span class="seal">한</span> Korean Learning</a>
-  <nav><a href="index.html#niveaus">Niveaus</a><a href="herhaling.html">Herhalen</a><a href="documentatie.html">Documentatie</a></nav>
+  <a class="brand" href="index.html"><span class="seal">한</span><span class="name">Korean Learning</span></a>
+  <nav><a href="index.html#niveaus" data-nav="leren">Leren</a><a href="herhaling.html" data-nav="herhalen">Herhalen <span class="count" data-due></span></a><a href="documentatie.html" data-nav="grammatica">Grammatica</a><a href="documentatie.html#woorden" data-nav="woorden">Woorden</a></nav>
+  <a class="btn cta" href="index.html#niveaus" data-continue>Ga verder</a>
 </div></header>
 <main class="wrap">
-<h1>Koreaans leren voor de TOPIK, niveau 1 tot 6</h1>
-<p class="lead">Grammaticalessen in het Nederlands, met Koreaanse voorbeelden, romanisatie en uitspraak. Elke les: eerst gokken, dan het idee en de nuance, dan lezen en oefenen. Wat je gehaald hebt, komt later terug om te herhalen.</p>
-
-<h2 id="niveaus">Kies je niveau</h2>
-<div class="grid">
-  <a class="card" href="topik1/"><div class="big">TOPIK 1</div><p class="muted small zh">은/는 · 이/가, 을/를, 에/에서, -아요/어요, -았/었어요, -(으)세요, -지만 ...</p><span class="tag ok">15 lessen</span></a>
-  <a class="card" href="topik2/"><div class="big">TOPIK 2</div><p class="muted small zh">-(으)ㄹ 거예요, -아서/어서, -(으)니까, -고 있어요, -(으)ㄹ 때, onregelmatige werkwoorden ...</p><span class="tag ok">15 lessen</span></a>
-  <a class="card" href="topik3/"><div class="big">TOPIK 3</div><p class="muted small zh">-는데, -기 때문에, bijzinnen, -(으)ㄴ 적이 있다, -는 것 같다, -기로 하다 ...</p><span class="tag ok">15 lessen</span></a>
-  <a class="card" href="topik4/"><div class="big">TOPIK 4</div><p class="muted small zh">-더라도, -는 바람에, -다가, -았/었더니, -던, -느라고, passief, causatief ...</p><span class="tag ok">15 lessen</span></a>
-  <a class="card" href="topik5/"><div class="big">TOPIK 5</div><p class="muted small zh">-는 반면에, -(으)ㄹ 리가 없다, -(으)ㄹ수록, -(으)ㄹ 뻔하다, -는 김에, -고 말다 ...</p><span class="tag ok">15 lessen</span></a>
-  <a class="card" href="topik6/"><div class="big">TOPIK 6</div><p class="muted small zh">-는 데다가, -기는커녕, -(으)ㄹ지언정, -(으)ㄴ 나머지, -기 나름이다, -(으)ㄹ 따름이다 ...</p><span class="tag ok">15 lessen</span></a>
-</div>
-
-<h2>Zo werkt een les</h2>
-<div class="card">
-<ol>
-  <li><b>Gok eerst.</b> Eén vraag over het nieuwe patroon, vóór de uitleg. Telt niet mee.</li>
-  <li><b>Het idee.</b> Welk probleem lost het patroon op, een plaatje van de zinsbouw, en de valkuil.</li>
-  <li><b>Dieper.</b> Wanneer wel en niet, het verschil met patronen die erop lijken, en veelgemaakte fouten.</li>
-  <li><b>Voorbeelden, woorden, dialoog en leestekst.</b> Met uitspraakhulp (uit te zetten) en uitspraak via je browser.</li>
-  <li><b>Oefenen.</b> Meerkeuze, invullen, zinnen bouwen en vertalen. Fout? Je krijgt uitleg en probeert opnieuw.</li>
-  <li><b>Herhalen.</b> Na 2 dagen komen nieuwe vragen terug. Goed: de pauze verdubbelt. Fout: morgen opnieuw.</li>
-</ol>
-</div>
-<p>Alle grammatica en woorden op één plek: <a href="documentatie.html">Documentatie</a>. Per niveau is er ook een woordenlijst met flashcards.</p>
+<div id="app" data-page="home"><h1>Koreaans leren voor de TOPIK, niveau 1 tot 6</h1><p class="lead">Grammaticalessen in het Nederlands, met Koreaanse voorbeelden, romanisatie en uitspraak. Elke les: eerst gokken, dan het idee en de nuance, dan lezen en oefenen. Wat je gehaald hebt, komt later terug om te herhalen.</p><ul><li><a href="topik1/">TOPIK 1</a></li><li><a href="topik2/">TOPIK 2</a></li><li><a href="topik3/">TOPIK 3</a></li><li><a href="topik4/">TOPIK 4</a></li><li><a href="topik5/">TOPIK 5</a></li><li><a href="topik6/">TOPIK 6</a></li></ul></div>
+<script>window.HOME = {"h1": "Koreaans leren voor de TOPIK, niveau 1 tot 6", "lead": "Grammaticalessen in het Nederlands, met Koreaanse voorbeelden, romanisatie en uitspraak. Elke les: eerst gokken, dan het idee en de nuance, dan lezen en oefenen. Wat je gehaald hebt, komt later terug om te herhalen.", "topics": {"topik1": "은/는 · 이/가, 을/를, 에/에서, -아요/어요, -았/었어요, -(으)세요, -지만 ...", "topik2": "-(으)ㄹ 거예요, -아서/어서, -(으)니까, -고 있어요, -(으)ㄹ 때, onregelmatige werkwoorden ...", "topik3": "-는데, -기 때문에, bijzinnen, -(으)ㄴ 적이 있다, -는 것 같다, -기로 하다 ...", "topik4": "-더라도, -는 바람에, -다가, -았/었더니, -던, -느라고, passief, causatief ...", "topik5": "-는 반면에, -(으)ㄹ 리가 없다, -(으)ㄹ수록, -(으)ㄹ 뻔하다, -는 김에, -고 말다 ...", "topik6": "-는 데다가, -기는커녕, -(으)ㄹ지언정, -(으)ㄴ 나머지, -기 나름이다, -(으)ㄹ 따름이다 ..."}};</script>
 <footer>Oefenmateriaal, geen officiële TOPIK-vragen of -scores. Je voortgang staat alleen in deze browser.</footer>
 </main>
-</body></html>
+<script src="assets/data/topik1.js?v=4"></script><script src="assets/data/topik2.js?v=4"></script><script src="assets/data/topik3.js?v=4"></script><script src="assets/data/topik4.js?v=4"></script><script src="assets/data/topik5.js?v=4"></script><script src="assets/data/topik6.js?v=4"></script><script>window.SITE={key:"korean-learning-v1",lang:"ko-KR",voice:/^ko/i,rom:"romanisatie",language:"Koreaans",unit:"Hangul",sep:" ",listNote:"Dit is geen officiële TOPIK-woordenlijst.",first:"topik1/les.html?id=01",firstLabel:"TOPIK 1, les 1",passSeal:"합"};</script><script src="assets/app.js?v=4"></script></body></html>

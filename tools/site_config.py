@@ -1,9 +1,12 @@
 # Site settings for tools/build_pages.py (Korean-Learning). Bump V after changing anything in assets/.
-V = 3
+V = 4
 BRAND, SEAL = "Korean Learning", "한"
 FOOTER = "Oefenmateriaal, geen officiële TOPIK-vragen of -scores. Je voortgang staat alleen in deze browser."
 SITE_JS = ('<script>window.SITE={key:"korean-learning-v1",lang:"ko-KR",voice:/^ko/i,rom:"romanisatie",language:"Koreaans",'
-           'unit:"Hangul",sep:" ",listNote:"Dit is geen officiële TOPIK-woordenlijst.",first:"topik1/les.html?id=01",firstLabel:"TOPIK 1 · les 1"};</script>')
+           'unit:"Hangul",sep:" ",listNote:"Dit is geen officiële TOPIK-woordenlijst.",first:"topik1/les.html?id=01",firstLabel:"TOPIK 1, les 1",passSeal:"합"};</script>')
+SITE_HEAD = ('<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+             '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Serif+KR:wght@400;600&display=swap">'
+             '<style>:root{--zh:"Noto Serif KR","AppleMyungjo","Batang",serif;--green:#2b5a8a;--green-soft:#e6eef7;--grid:#cddbeb;--ok:#2b5a8a;--ok-soft:#e6eef7}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--green:#8fb5e3;--green-soft:#17263a;--grid:#2a3e57;--ok:#8fb5e3;--ok-soft:#17263a}}</style>')
 H1 = "Koreaans leren voor de TOPIK, niveau 1 tot 6"
 LEAD = ("Grammaticalessen in het Nederlands, met Koreaanse voorbeelden, romanisatie en uitspraak. Elke les: eerst gokken, "
         "dan het idee en de nuance, dan lezen en oefenen. Wat je gehaald hebt, komt later terug om te herhalen.")
