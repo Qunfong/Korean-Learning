@@ -284,4 +284,10 @@ details summary { cursor: pointer; color: var(--green); font-weight: 700; }
 .fc-back .py { font-size: 18px; color: var(--muted); }
 select.search { appearance: auto; }
 
+/* automatic romanization above Korean words (window.SITE.autoRom) */
+ruby { ruby-position: over; }
+rt { font-family: var(--ui); font-size: 11.5px; font-weight: 400; color: var(--muted); letter-spacing: 0; text-decoration: none; }
+.blk rt { font-size: 11px; }
+body.no-py rt { display: none; }
+
 footer { color: var(--muted); font-size: 14.5px; border-top: 1px solid var(--line); margin-top: 72px; padding-top: 18px; }

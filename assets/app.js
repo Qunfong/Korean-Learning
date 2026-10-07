@@ -29,7 +29,7 @@
   // ---------- helpers ----------
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   var HAN = /[㐀-鿿，。？！…“”ᄀ-ᇿ㄰-㆏가-힣]+/g;
-  function zh(s) { return esc(s).replace(HAN, function (m) { return '<span class="zh">' + m + "</span>"; }); }
+  function zh(s) { return esc(s).replace(HAN, function (m) { return '<span class="zh">' + (CFG.autoRom && !romOff ? rubyKo(m) : m) + "</span>"; }); }
   function el(html) { var t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
 
   // Stable shuffle: the same question always shows the same A/B/C/D order.
@@ -44,6 +44,52 @@
     for (var j = n - 1; j > 0; j--) { var k = Math.floor(r() * (j + 1)); var t = idx[j]; idx[j] = idx[k]; idx[k] = t; }
     return idx;
   }
+
+  // ---------- automatic romanization (Korean site: window.SITE.autoRom) ----------
+  // Revised Romanization of a Hangul word, pronunciation-based: liaison, nasalization, ㄹ-assimilation, ㅎ-aspiration.
+  var RR_INI = ["g", "kk", "n", "d", "tt", "r", "m", "b", "pp", "s", "ss", "", "j", "jj", "ch", "k", "t", "p", "h"];
+  var RR_MED = ["a", "ae", "ya", "yae", "eo", "e", "yeo", "ye", "o", "wa", "wae", "oe", "yo", "u", "wo", "we", "wi", "yu", "eu", "ui", "i"];
+  // per final consonant: [sound before a consonant or at the end, what stays when the next syllable starts with ㅇ, what moves over]
+  var RR_FIN = [["", "", ""], ["k", "", "g"], ["k", "", "kk"], ["k", "k", "s"], ["n", "", "n"], ["n", "n", "j"], ["n", "", "n"], ["t", "", "d"],
+    ["l", "", "r"], ["k", "l", "g"], ["m", "l", "m"], ["l", "l", "b"], ["l", "l", "s"], ["l", "l", "t"], ["p", "l", "p"], ["l", "", "r"],
+    ["m", "", "m"], ["p", "", "b"], ["p", "p", "s"], ["t", "", "s"], ["t", "", "ss"], ["ng", "ng", ""], ["t", "", "j"], ["t", "", "ch"],
+    ["k", "", "k"], ["t", "", "t"], ["p", "", "p"], ["t", "", ""]];
+  function romanize(word) {
+    var syl = [];
+    for (var i = 0; i < word.length; i++) {
+      var c = word.charCodeAt(i) - 0xac00;
+      if (c < 0 || c > 11171) return null;
+      syl.push({ i: Math.floor(c / 588), m: Math.floor((c % 588) / 28), f: c % 28 });
+    }
+    var out = "", ini = RR_INI[syl[0].i];
+    for (var k = 0; k < syl.length; k++) {
+      var s = syl[k], n = syl[k + 1], coda = RR_FIN[s.f][0];
+      out += ini + RR_MED[s.m];
+      if (!n) { out += coda; break; }
+      var ni = RR_INI[n.i];
+      var hFinal = s.f === 6 || s.f === 15 || s.f === 27; // ㄶ ㅀ ㅎ
+      if (n.i === 11 && n.m === 20 && (s.f === 7 || s.f === 25)) { coda = ""; ni = s.f === 7 ? "j" : "ch"; } // 같이 gachi, 굳이 guji
+      else if (n.i === 11) { coda = RR_FIN[s.f][1]; ni = RR_FIN[s.f][2]; }        // liaison: 음악 eumak
+      else if (hFinal && (n.i === 0 || n.i === 3 || n.i === 12)) {               // 좋다 jota, 많고 manko
+        coda = s.f === 6 ? "n" : s.f === 15 ? "l" : ""; ni = n.i === 0 ? "k" : n.i === 3 ? "t" : "ch";
+      } else if (n.i === 18 && /^[ktp]$/.test(coda)) { ni = coda; coda = ""; }    // 축하 chuka, 입학 ipak
+      else if (n.i === 2 || n.i === 6) { coda = coda === "k" ? "ng" : coda === "t" ? "n" : coda === "p" ? "m" : coda; } // 국물 gungmul
+      else if (n.i === 5) {                                                      // ㄹ after a final
+        if (coda === "n" || coda === "l") { coda = "l"; ni = "l"; }              // 신라 silla
+        else if (coda) { coda = coda === "k" ? "ng" : coda === "t" ? "n" : coda === "p" ? "m" : coda; ni = "n"; } // 종로 jongno
+      }
+      if (coda === "l" && n.i === 2) ni = "l";                                   // 설날 seollal
+      out += coda; ini = ni;
+    }
+    return out;
+  }
+  // Wrap each Hangul word in <ruby> with its romanization. Input is already HTML-escaped.
+  function rubyKo(html) {
+    return html.replace(/[가-힣]+/g, function (w) { var r = romanize(w); return r ? "<ruby>" + w + "<rt>" + r + "</rt></ruby>" : w; });
+  }
+  // A level can switch the automatic romanization off ("noRom" in _level.json), e.g. where the exercises test reading Hangul itself.
+  var romOff = false;
+  function kor(s) { return CFG.autoRom && !romOff ? rubyKo(esc(s)) : esc(s); }
 
   // ---------- speech (browser voice, playback only) ----------
   var canSpeak = "speechSynthesis" in window;
@@ -182,7 +228,7 @@
   }
   function patternHtml(L) {
     return '<div class="pattern">' + L.pattern.map(function (b) {
-      return '<div class="blk c' + b.c + (b.key ? " key" : "") + '"><span class="l">' + esc(b.l || " ") + '</span><span class="v">' + esc(b.v) + "</span></div>";
+      return '<div class="blk c' + b.c + (b.key ? " key" : "") + '"><span class="l">' + esc(b.l || " ") + '</span><span class="v">' + kor(b.v) + "</span></div>";
     }).join("") + "</div>";
   }
   function nuanceHtml(L) {
@@ -192,7 +238,7 @@
   }
   function mistakesHtml(L) {
     return '<div class="card"><table class="mistakes"><tr><th>Fout</th><th>Goed</th><th>Waarom</th></tr>' + (L.mistakes || []).map(function (m) {
-      return '<tr><td class="bad zh">' + esc(m.wrong) + '</td><td class="good zh">' + esc(m.right) + "</td><td>" + zh(m.why) + "</td></tr>";
+      return '<tr><td class="bad zh">' + kor(m.wrong) + '</td><td class="good zh">' + kor(m.right) + "</td><td>" + zh(m.why) + "</td></tr>";
     }).join("") + "</table></div>";
   }
 
@@ -276,6 +322,7 @@
     var idx = level.lessons.findIndex(function (l) { return l.id === params.get("id"); });
     if (idx < 0) idx = 0;
     var L = level.lessons[idx], lid = levelKey + "-" + L.id;
+    romOff = !!level.noRom;
     document.title = L.id + " " + L.title + " | " + level.level;
     state.last = { lk: levelKey, id: L.id }; save(state);
 
@@ -378,7 +425,7 @@
     var out = [];
     Object.keys(window.HSK).forEach(function (lk) {
       window.HSK[lk].lessons.forEach(function (L) {
-        L.review.forEach(function (q, ri) { out.push({ key: lk + "-" + L.id + "-r" + ri, q: q, lesson: L, dir: window.HSK[lk].dir || lk }); });
+        L.review.forEach(function (q, ri) { out.push({ key: lk + "-" + L.id + "-r" + ri, q: q, lesson: L, dir: window.HSK[lk].dir || lk, noRom: !!window.HSK[lk].noRom }); });
       });
     });
     return out;
@@ -403,6 +450,7 @@
     root.innerHTML = h.join("");
     var rv = root.querySelector("#rv");
     due.forEach(function (it, i) {
+      romOff = it.noRom;
       var w = mcWidget(it.q, it.key, function (right) {
         var r = state.rules[it.key];
         if (right) {

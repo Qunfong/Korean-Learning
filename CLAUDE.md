@@ -11,6 +11,8 @@ The owner's explicit requirement: a learner may start without knowing Hangul.
 - Always give the pronunciation (Revised Romanization) next to Korean, like pinyin on the Chinese site: in examples, dialogue, reading, vocab, word lists and order tokens (`py` fields). The "Romanisatie tonen" switch lets advanced learners hide it.
 - The beginner path starts before TOPIK 1: Hangul (letters, syllable blocks, batchim, sound changes) and basic words with romanization.
 - Explain every grammar term in plain Dutch the first time it appears (받침 = slotmedeklinker, etc.).
+- Level `start` ("Start: Hangul", folder `start/`, 10 lessons + a 250-word basic list) comes before TOPIK 1: vowels, consonants, syllable blocks, compound vowels, strong consonants, 받침, sound rules, greetings, polite phrases, first sentences. Its fill-in exercises accept romanization because beginners often have no Korean keyboard.
+- Automatic romanization: with `autoRom:true` in `SITE_JS`, app.js puts a `<ruby>` romanization above every Hangul word that has no explicit `py` (questions, options, rules, pattern blocks, mistakes). The romanizer (`romanize()` in app.js) does Revised Romanization with liaison, nasalization, ㄹ-assimilation, ㅎ-aspiration and palatalization; it was checked on 30 reference words. A level can switch it off with `"noRom": true` in its `_level.json` - the `start` level does, because its exercises test reading Hangul and ruby would give the answer away.
 
 ## How it works
 - No framework, no bundler, no dependencies. Plain HTML + one `assets/app.js` (vanilla JS, IIFE) + one `assets/style.css`.
